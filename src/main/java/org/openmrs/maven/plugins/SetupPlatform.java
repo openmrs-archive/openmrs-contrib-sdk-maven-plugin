@@ -8,6 +8,7 @@ import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.components.interactivity.Prompter;
 import org.codehaus.plexus.components.interactivity.PrompterException;
 import org.openmrs.maven.plugins.model.Server;
+import org.openmrs.maven.plugins.utility.AttributeHelper;
 import org.openmrs.maven.plugins.utility.PropertyManager;
 import org.openmrs.maven.plugins.utility.SDKConstants;
 
@@ -133,16 +134,10 @@ public class SetupPlatform extends AbstractMojo {
      * @throws MojoExecutionException
      */
     public String setup(Server server, Boolean requireDbParams) throws MojoExecutionException {
+        AttributeHelper helper = new AttributeHelper(prompter);
         File omrsPath = new File(System.getProperty("user.home"), SDKConstants.OPENMRS_SERVER_PATH);
-        if (server.getServerId() == null) try {
-            String defaultId = "server";
-            int indx = 0;
-            while (new File(omrsPath, defaultId).exists()) {
-                indx++;
-                defaultId = "server" + String.valueOf(indx);
-            }
-            server.setServerId(prompter.prompt("Define value for property 'serverId': (default: '" + defaultId + "')"));
-            if (server.getServerId().equals("")) server.setServerId(defaultId);
+        try {
+            server.setServerId(helper.promptForNewServerIfMissing(omrsPath.getPath(), server.getServerId()));
         } catch (PrompterException e) {
             getLog().error(e.getMessage());
         }
@@ -179,9 +174,10 @@ public class SetupPlatform extends AbstractMojo {
             File propertiesFile = new File(serverPath.getPath(), SDKConstants.OPENMRS_SERVER_PROPERTIES);
             PropertyManager properties = new PropertyManager(propertiesFile.getPath(), getLog());
             try {
-                String defaultDriver = "mysql";
-                if (server.getDbDriver() == null) server.setDbDriver(prompter.prompt("Define value for property 'dbDriver': (default: 'mysql')"));
-                if (server.getDbDriver().equals("")) server.setDbDriver(defaultDriver);
+                // String defaultDriver = "mysql";
+                server.setDbDriver(helper.promptForValueIfMissingWithDefault(dbDriver, "dbDriver", "mysql"));
+                // if (server.getDbDriver() == null) server.setDbDriver(prompter.prompt("Define value for property 'dbDriver': (default: 'mysql')"));
+                // if (server.getDbDriver().equals("")) server.setDbDriver(defaultDriver);
                 String defaultUri = SDKConstants.URI_MYSQL;
                 if ((server.getDbDriver().equals("postgresql")) || (server.getDbDriver().equals(SDKConstants.DRIVER_POSTGRESQL))) {
                     properties.setParam("dbDriver", SDKConstants.DRIVER_POSTGRESQL);
@@ -191,17 +187,20 @@ public class SetupPlatform extends AbstractMojo {
                     properties.setParam("dbDriver", SDKConstants.DRIVER_H2);
                     defaultUri = SDKConstants.URI_H2;
                 }
-                else if (server.getDbDriver().equals("mysql")) properties.setParam("dbDriver", SDKConstants.DRIVER_MYSQL);
+                else if (server.getDbDriver().equals("mysql")) {
+                    properties.setParam("dbDriver", SDKConstants.DRIVER_MYSQL);
+                }
                 else properties.setParam("dbDriver", server.getDbDriver());
 
-                if (server.getDbUri() == null) server.setDbUri(prompter.prompt("Define value for property 'dbUri': (default: '" + defaultUri + "')"));
-                if (server.getDbUri().equals("")) server.setDbUri(defaultUri);
-
+                server.setDbUri(helper.promptForValueIfMissingWithDefault(dbUri, "dbUri", defaultUri));
+                //if (server.getDbUri() == null) server.setDbUri(prompter.prompt("Define value for property 'dbUri': (default: '" + defaultUri + "')"));
+                //if (server.getDbUri().equals("")) server.setDbUri(defaultUri);
                 String defaultUser = "root";
-                if (server.getDbUser() == null) server.setDbUser(prompter.prompt("Define value for property 'dbUser': (default: '" + defaultUser + "')"));
-                if (server.getDbUser().equals("")) server.setDbUser(defaultUser);
-                if (server.getDbPassword() == null) server.setDbPassword(prompter.prompt("Define value for property 'dbPassword'"));
-
+                server.setDbUser(helper.promptForValueIfMissingWithDefault(dbUser, "dbUser", defaultUser));
+                //if (server.getDbUser() == null) server.setDbUser(prompter.prompt("Define value for property 'dbUser': (default: '" + defaultUser + "')"));
+                //if (server.getDbUser().equals("")) server.setDbUser(defaultUser);
+                server.setDbPassword(helper.promptForValueIfMissing(dbPassword, "dbPassword"));
+                //if (server.getDbPassword() == null) server.setDbPassword(prompter.prompt("Define value for property 'dbPassword'"));
                 properties.setParam("dbDriver", server.getDbDriver());
                 properties.setParam("dbUser", server.getDbUser());
                 properties.setParam("dbPassword", server.getDbPassword());
