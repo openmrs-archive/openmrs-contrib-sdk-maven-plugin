@@ -11,6 +11,7 @@ import org.openmrs.maven.plugins.model.Server;
 import org.openmrs.maven.plugins.utility.ConfigurationManager;
 import org.openmrs.maven.plugins.utility.SDKConstants;
 
+import java.io.File;
 import java.util.List;
 
 /**
@@ -114,15 +115,17 @@ public class Setup extends AbstractMojo {
                         .setInteractiveMode(interactiveMode)
                         .build();
         // configure server ,and prompt params if not set
-        String serverPath = configurator.setup(server, true);
-        ConfigurationManager manager = new ConfigurationManager(serverPath, getLog());
+        /*String serverPath = configurator.setup(server, true);
+        File pomPath = new File(serverPath, "pom.xml");
+        ConfigurationManager manager = new ConfigurationManager(pomPath.getPath(), getLog());
         List<Artifact> artifacts = SDKConstants.ARTIFACTS.get(version);
         if (artifacts != null) {
-            manager.addArtifactsToConfiguration(artifacts);
+            manager.addArtifactListToConfiguration(artifacts);
             manager.apply();
             getLog().info("Modules for version " + version + " configured successfully");
         }
         else getLog().info("There are no modules for selected OpenMRS version");
+        */
         getLog().info("Server configured successfully");
     }
 }
