@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import static org.twdata.maven.mojoexecutor.MojoExecutor.*;
 
@@ -130,9 +131,7 @@ public class Run extends AbstractTask {
 		}
 
 		System.setProperty("MAVEN_OPTS", mavenOpts);
-
-		System.out.println("Using JAVA_HOME: " + System.getenv("JAVA_HOME") + "\n");
-		System.out.println("Using MAVEN_OPTS: " + mavenOpts + "\n");
+		System.out.println("\n" + "Using MAVEN_OPTS: " + mavenOpts + "\n");
 
 		System.out.println("Forking a new process... (use -Dfork=false to prevent forking)\n");
 
@@ -152,6 +151,10 @@ public class Run extends AbstractTask {
 		processBuilder.redirectErrorStream(true);
 		processBuilder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
 		processBuilder.redirectInput(ProcessBuilder.Redirect.INHERIT);
+		Map<String, String> env = processBuilder.environment();
+		String jdk = server.getJdkPath();
+		env.put("JAVA_HOME", jdk);
+		System.out.println("Using JAVA_HOME: " + jdk + "\n");
 		try {
 			final Process process = processBuilder.start();
 

@@ -58,7 +58,10 @@ public class RunTomcat extends AbstractMojo {
 
 		Server server = Server.loadServer(serverId);
 
+		String java = System.getProperty("java.home");
 		String jdk = System.getProperty("java.version");
+		System.out.println(jdk);
+		System.out.println(java);
 		boolean isJdkValid = false;
 		String recommendedJdk = null;
 
@@ -69,7 +72,9 @@ public class RunTomcat extends AbstractMojo {
 		} else if (platformVersion.getMajorVersion() == 2){
 			isJdkValid =  (jdk.startsWith("1.8"));
 			recommendedJdk = "JDK 1.8";
-		} else throw new MojoExecutionException("Invalid server platform version: "+platformVersion.toString());
+		} else {
+			throw new MojoExecutionException("Invalid server platform version: "+platformVersion.toString());
+		}
 
 		if(!isJdkValid){
 			wizard.showJdkErrorMessage(jdk, server.getPlatformVersion(), recommendedJdk, server.getPropertiesFile().getPath());

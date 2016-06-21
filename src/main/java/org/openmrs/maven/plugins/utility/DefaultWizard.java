@@ -1,6 +1,9 @@
 package org.openmrs.maven.plugins.utility;
 
 import com.google.common.collect.Lists;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.LineIterator;
 import org.apache.commons.lang.StringUtils;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -15,10 +18,21 @@ import org.openmrs.maven.plugins.model.DistroProperties;
 import org.openmrs.maven.plugins.model.Server;
 import org.openmrs.maven.plugins.model.UpgradeDifferential;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.io.Writer;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.Map.Entry;
 
@@ -40,6 +54,7 @@ public class DefaultWizard implements Wizard {
     private static final String YESNO = " [Y/n]";
     private static final String REFERENCEAPPLICATION_2_3 = "org.openmrs.distro:referenceapplication-package:2.3.1";
     private static final String DEFAULT_CUSTOM_DIST_ARTIFACT = "Please specify custom distribution artifact%s (default: '%s')";
+    private static final String CUSTOM_JDK_PATH = "Please specify a path to JDK used for running this server (-Djdk)";
     private static final String REFAPP_OPTION_TMPL = "Reference Application %s";
     private static final String REFAPP_ARTIFACT_TMPL = "org.openmrs.distro:referenceapplication-package:%s";
     private static final String JDK_ERROR_TMPL = "\n\nThe JDK %s is not compatible with OpenMRS Platform %s. " +
@@ -141,7 +156,19 @@ public class DefaultWizard implements Wizard {
                 if(Integer.parseInt(val)<i){
                     return options.get(Integer.parseInt(val)-1);
                 } else if(Integer.parseInt(val)==i && allowCustom) {
-                    return promptForValueIfMissingWithDefault(DEFAULT_CUSTOM_DIST_ARTIFACT, null, "", REFERENCEAPPLICATION_2_3);
+                    if (options.get(0).contains("JAVA_HOME")) {
+                        String customJDK = prompt(CUSTOM_JDK_PATH);
+                        if (isThereJdkUnderPath(customJDK)) {
+                            addJdkPathToSdkProperties(customJDK);
+                            return customJDK;
+                        }
+                        else {
+                            showMessage("Incorrect JDK path, please try again");
+                        }
+                    }
+                    else {
+                        return promptForValueIfMissingWithDefault(DEFAULT_CUSTOM_DIST_ARTIFACT, null, "", REFERENCEAPPLICATION_2_3);
+                    }
                 }
             }
             System.out.println("\nPlease insert valid option number!");
@@ -259,6 +286,111 @@ public class DefaultWizard implements Wizard {
                 null, "version", versions, true);
         return version;
 	}
+
+    @Override
+    public void promptForJdkPath(Server server) {
+
+        List<String> paths = new ArrayList<>();
+        paths.add("JAVA_HOME (currently: " + System.getProperty("java.home") + ")");
+        paths.addAll(getListOf5RecentJdkPaths());
+
+        String path = promptForMissingValueWithOptions("Which JDK would you like to use to run this server?",
+                server.getJdkPath(), "path", paths, true);
+
+        if (path.equals(paths.get(0))) {
+            server.setJdkPath(System.getProperty("java.home"));
+        }
+        else {
+            server.setJdkPath(path);
+        }
+    }
+
+    private void addJdkPathToSdkProperties(String path) {
+
+        String home = System.getProperty("user.home");
+        File openMRS = new File(home, SDKConstants.OPENMRS_SERVER_PATH + "/sdk.properties");
+
+        Writer output = null;
+        try {
+            output = new BufferedWriter(new FileWriter(openMRS, true));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        if (output != null) {
+            try {
+                if (!path.equals(System.getProperty("java.home")) && !isPathLineDuplicated(openMRS, path)) {
+                    output.write(path  + "\n");
+                    output.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        else {showMessage("Failed to save JDK path to properties file");
+        }
+    }
+
+    private boolean isPathLineDuplicated(File file, String jdkPath) {
+        LineIterator it = null;
+        try {
+            it = FileUtils.lineIterator(file, "UTF-8");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        if (it != null) {
+            while (it.hasNext()) {
+                if (jdkPath.equals(it.nextLine())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean isThereJdkUnderPath(String jdkPath) {
+        File jdk = new File(jdkPath + "/bin/java");
+        if (jdk.exists()) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    @Override
+    public List<String> getListOf5RecentJdkPaths() {
+        final int count = 5;
+        String home = System.getProperty("user.home");
+        File openMRS = new File(home, SDKConstants.OPENMRS_SERVER_PATH + "/sdk.properties");
+
+        List<String> result = new ArrayList<String>();
+
+        if(!openMRS.exists()) {
+            return result;
+        }
+        else {
+            try {
+                LineIterator it = FileUtils.lineIterator(openMRS, "UTF-8");
+                for (int j = 0; j < count && it.hasNext(); j++) {
+                    String pathToAdd = it.nextLine();
+                    if (pathToAdd.length() > 0) {
+                        if (isThereJdkUnderPath(pathToAdd)) {
+                            result.add(pathToAdd);
+                        }
+                        else {
+                            //TODO Should delete line
+                            j--;
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return result;
+        }
+    }
 
 	@Override
     public void promptForDistroVersionIfMissing(Server server) throws MojoExecutionException {
