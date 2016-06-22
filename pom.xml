@@ -186,6 +186,13 @@
 			<artifactId>jstl</artifactId>
 			<version>1.2</version>
 	  	</dependency>
+
+		<!--JGit-->
+		<dependency>
+			<groupId>org.eclipse.jgit</groupId>
+			<artifactId>org.eclipse.jgit</artifactId>
+			<version>4.3.1.201605051710-r</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -316,6 +323,10 @@
 			<id>openmrs-repo</id>
 			<name>OpenMRS repository</name>
 			<url>http://mavenrepo.openmrs.org/nexus/content/repositories/public</url>
+		</repository>
+		<repository>
+			<id>jgit-repository</id>
+			<url>https://repo.eclipse.org/content/groups/releases/</url>
 		</repository>
 	</repositories>
 
