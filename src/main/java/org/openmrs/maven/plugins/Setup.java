@@ -12,6 +12,8 @@ import org.openmrs.maven.plugins.utility.SDKConstants;
 
 import java.io.File;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @goal setup
@@ -57,6 +59,13 @@ public class Setup extends AbstractTask {
      * @parameter expression="${dbPassword}"
      */
     private String dbPassword;
+
+    /**
+     * Path to JDK Version
+     *
+     * @parameter expression="${jdk}"
+     */
+    private String jdk;
 
     /**
      * Path to installation.properties
@@ -152,6 +161,10 @@ public class Setup extends AbstractTask {
                 moduleInstaller.installModule(SDKConstants.H2_ARTIFACT, server.getServerDirectory().getPath());
                 wizard.showMessage("The specified database "+server.getDbName()+" does not exist and it will be created for you.");
             }
+        }
+
+        if (server.getJdkPath() == null && !isCreatePlatform) {
+            wizard.promptForJdkPath(server);
         }
 
         server.setUnspecifiedToDefault();
@@ -291,6 +304,7 @@ public class Setup extends AbstractTask {
                         .setDbUser(dbUser)
                         .setDbPassword(dbPassword)
                         .setInteractiveMode(interactiveMode)
+                        .setJdkPath(jdk)
                         .build();
         // setup non-platform server
         String serverPath = setup(server, createPlatform, true, distroProperties);

@@ -41,6 +41,8 @@ public interface Wizard {
 
     String promptForValueIfMissing(String value, String parameterName);
 
+    void promptForJdkPath(Server server);
+
     boolean promptForInstallDistro();
 
     boolean promptYesNo(String text);
@@ -52,6 +54,8 @@ public interface Wizard {
     String promptForExistingServerIdIfMissing(String serverId);
 
     List<String> getListOf5RecentServers();
+
+    List<String> getListOf5RecentJdkPaths();
 
     String addMySQLParamsIfMissing(String dbUri);
 
